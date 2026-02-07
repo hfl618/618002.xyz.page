@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>618002 工具箱</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .tool-card:hover { transform: translateY(-2px); }
+        .tool-card { transition: all 0.2s ease; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    
+    <!-- Navbar -->
+    <nav class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            <h1 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                <span>🧰</span> 618002 工具箱
+            </h1>
+            <div class="relative w-full md:w-96">
+                <input type="text" id="searchInput" placeholder="搜索工具..." 
+                    class="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow">
+                <span class="absolute left-3 top-2.5 text-gray-400">🔍</span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-6xl mx-auto px-4 py-8">
+        
+        <!-- 内置实用工具 (Original Features) -->
+        <section class="mb-12">
+            <h2 class="text-xl font-bold text-gray-700 mb-6 flex items-center gap-2">
+                <span>⚡</span> 快捷工具
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- 字数统计 -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                    <h3 class="font-bold text-gray-800 mb-3">📝 字数统计</h3>
+                    <textarea id="textInput" class="w-full border p-3 rounded-lg h-24 mb-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none" placeholder="在此输入或粘贴文本..."></textarea>
+                    <div class="flex justify-between items-center text-sm">
+                        <span class="text-gray-500">实时统计</span>
+                        <span class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-mono font-bold" id="charCount">0 字符</span>
+                    </div>
+                </div>
+
+                <!-- 密码生成器 -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                    <h3 class="font-bold text-gray-800 mb-3">🔑 密码生成器</h3>
+                    <div class="flex gap-2 mb-4">
+                        <input id="pwOutput" readonly class="w-full border p-2 rounded-lg bg-gray-50 font-mono text-center text-lg tracking-wider text-gray-700" value="点击生成">
+                        <button onclick="copyPw()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg transition-colors" title="复制">📋</button>
+                    </div>
+                    <button onclick="genPw()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg transition-colors active:scale-95 transform">
+                        生成强密码
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 导航链接 (Flask Data) -->
+        <div id="toolsContainer">
+            {% for group in tool_groups %}
+            <section class="mb-10 tool-group">
+                <h2 class="text-xl font-bold text-gray-700 mb-6 flex items-center gap-2 border-b pb-2">
+                    {{ group.category }}
+                </h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {% for tool in group.items %}
+                    <a href="{{ tool.url }}" target="_blank" class="tool-card bg-white p-5 rounded-xl shadow-sm border border-gray-100 hover:border-blue-300 hover:shadow-md flex items-start gap-4 group">
+                        <div class="text-3xl bg-gray-50 w-12 h-12 flex items-center justify-center rounded-lg group-hover:bg-blue-50 transition-colors">
+                            {{ tool.icon }}
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-gray-800 group-hover:text-blue-600 transition-colors">{{ tool.name }}</h3>
+                            <p class="text-sm text-gray-500 mt-1 line-clamp-2">{{ tool.desc }}</p>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+            </section>
+            {% endfor %}
+        </div>
+
+        <!-- No Results Message -->
+        <div id="noResults" class="hidden text-center py-12">
+            <p class="text-gray-400 text-lg">没有找到匹配的工具 😕</p>
+        </div>
+
+    </div>
+
+    <footer class="text-center py-8 text-gray-400 text-sm">
+        <p>&copy; 2026 618002.xyz Toolset</p>
+    </footer>
+
+    <script>
+        // --- 搜索逻辑 ---
+        const searchInput = document.getElementById('searchInput');
+        const toolGroups = document.querySelectorAll('.tool-group');
+        const noResults = document.getElementById('noResults');
+
+        searchInput.addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase();
+            let hasVisibleTools = false;
+
+            toolGroups.forEach(group => {
+                const tools = group.querySelectorAll('.tool-card');
+                let hasVisibleInGroup = false;
+
+                tools.forEach(card => {
+                    const name = card.querySelector('h3').textContent.toLowerCase();
+                    const desc = card.querySelector('p').textContent.toLowerCase();
+                    
+                    if (name.includes(term) || desc.includes(term)) {
+                        card.style.display = 'flex';
+                        hasVisibleInGroup = true;
+                        hasVisibleTools = true;
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+
+                // 如果组内没有可见工具，隐藏整个组标题
+                group.style.display = hasVisibleInGroup ? 'block' : 'none';
+            });
+
+            noResults.style.display = hasVisibleTools ? 'none' : 'block';
+        });
+
+        // --- 内置工具逻辑 ---
+        
+        // 字数统计
+        document.getElementById('textInput').addEventListener('input', (e) => {
+            document.getElementById('charCount').textContent = e.target.value.length + " 字符";
+        });
+
+        // 密码生成
+        function genPw() {
+            const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+            let retVal = "";
+            for (let i = 0; i < 16; ++i) {
+                retVal += charset.charAt(Math.floor(Math.random() * charset.length));
+            }
+            document.getElementById('pwOutput').value = retVal;
+        }
+
+        // 复制密码
+        function copyPw() {
+            const pw = document.getElementById('pwOutput');
+            if(pw.value && pw.value !== '点击生成') {
+                pw.select();
+                document.execCommand('copy'); // Fallback
+                // navigator.clipboard.writeText(pw.value); // Modern way
+                alert('密码已复制!');
+            }
+        }
+    </script>
+</body>
+</html>
